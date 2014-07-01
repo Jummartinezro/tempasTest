@@ -96,7 +96,7 @@ public class Dao {
                 Date startDate = resultSet.getTimestamp("StartDateTime");
                 Date endDate = resultSet.getTimestamp("EndDateTime");
                 scenario = new Scenario(scenarioNumber, sourceName, startDate, endDate);
-                System.out.println(scenario);
+                System.out.println(scenario+"\n");
             }
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);

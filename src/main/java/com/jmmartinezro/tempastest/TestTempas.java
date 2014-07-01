@@ -8,8 +8,7 @@ package com.jmmartinezro.tempastest;
 import com.jmmartinezro.model.Channels;
 import com.jmmartinezro.model.Scenario;
 import com.jmmartinezro.model.dao.Dao;
-import java.util.Arrays;
-import java.util.Iterator;
+import com.jmmartinezro.utils.GenerateSQL;
 
 /**
  *
@@ -28,15 +27,11 @@ public class TestTempas {
         for (String key : Channels.channels.keySet()) {
             //TODO Look over the sensors to decode the blob
             float[] data = dao.readSensor(scenario.getBabyId(),
-                    scenario.getStartDate(),
-                    scenario.getEndDate(), key);
+                    scenario.getStartDate(), scenario.getEndDate(), key);
             if (data != null) {
                 scenario.setSensorData(key, data);
             }
         }
-        for (String key : scenario.getSensorsData().keySet()) {
-            // System.out.println(key + " = " + Arrays.toString(scenario.getSensorsData().get(key)));
-            System.out.println("# Elems ("+key + ") = " + scenario.getSensorsData().get(key).length);
-        }
+        GenerateSQL.generateSQLFile(scenario);
     }
 }
