@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,6 +29,11 @@ public class Dao {
      * The connection to the DB
      */
     private Connection connection = null;
+    
+    /**
+     * Constant to find the number of seconds in a minute (60 :P )
+     */
+    private static final int MINUTE = (int) TimeUnit.MINUTES.toSeconds(1);
 
     /**
      * The trial ps for querying trials table.
@@ -59,9 +65,7 @@ public class Dao {
             connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/badger", "badger", "badger");
             binaryPS = connection.prepareStatement(binarySQL);
             trialPS = connection.prepareStatement(trialSQL);
-        } catch (SQLException ex) {
-            Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
+        } catch (SQLException | ClassNotFoundException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -96,7 +100,7 @@ public class Dao {
                 Date startDate = resultSet.getTimestamp("StartDateTime");
                 Date endDate = resultSet.getTimestamp("EndDateTime");
                 scenario = new Scenario(scenarioNumber, sourceName, startDate, endDate);
-                System.out.println(scenario+"\n");
+                System.out.println(scenario + "\n");
             }
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
@@ -116,7 +120,7 @@ public class Dao {
     public float[] readSensor(int babyID, Date startDate, Date endDate, String key) {
         int numElements = (int) ((endDate.getTime() - startDate.getTime())
                 / Channels.TICKSPERVALUE);
-        float[] result = new float[numElements];
+        float[] result = new float[numElements / MINUTE - 1];
         boolean modified = false;
         try {
 
@@ -139,9 +143,11 @@ public class Dao {
                         .getTime()) / Channels.TICKSPERVALUE);
                 int numCopy = endRecord - startRecord;
                 byte[] bytes = data.getBytes(startRecord, numCopy);
-
-                for (int i = 0; i < numCopy; i++) {
-                    int value = (int) bytes[i];
+                
+                //Every minute we save the data
+                int sample = 0;
+                for (int i = 0; i < numCopy && sample + MINUTE < numElements; i++) {
+                    int value = (int) bytes[sample += MINUTE];
                     result[i] = (value < 0) ? value + 256 : value;
                 }
                 modified = true;
@@ -149,7 +155,7 @@ public class Dao {
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return modified? result:null;
+        return modified ? result : null;
     }
 
 }

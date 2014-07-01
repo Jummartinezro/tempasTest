@@ -19,7 +19,7 @@ public final class GenerateSQL {
         Calendar cal = Calendar.getInstance();
         for (String key : scenario.getSensorsData().keySet()) {
             System.out.println(key + " = " + Arrays.toString(scenario.getSensorsData().get(key)));
-//            System.out.println("# Elems (" + key + ") = " + scenario.getSensorsData().get(key).length);    
+            System.out.println("# Elems (" + key + ") = " + scenario.getSensorsData().get(key).length);    
 //            cal.add(Calendar.SECOND, -1);
 //            Date oneHourBack = cal.getTime();
 //            System.out.println("Hour = " + oneHourBack);
