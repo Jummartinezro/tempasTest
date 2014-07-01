@@ -37,13 +37,13 @@ public final class Channels {
 
     static {
         Map<String, Integer> aMap = new HashMap<>();
-        aMap.put("HR", HR);
+        aMap.put("Heart Rate", HR);
         aMap.put("TC", TC);
         aMap.put("TP", TP);
         aMap.put("OX", OX);
         aMap.put("CO", CO);
-        aMap.put("BM", BM);
-        aMap.put("SO", SO);
+        aMap.put("Tension", BM);
+        aMap.put("Oxygen Saturation", SO);
         channels = Collections.unmodifiableMap(aMap);
     }
 

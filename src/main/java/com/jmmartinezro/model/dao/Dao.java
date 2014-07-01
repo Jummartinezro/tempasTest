@@ -104,17 +104,26 @@ public class Dao {
         return scenario;
     }
 
+    /**
+     * Reads sensor values from pbinary table
+     *
+     * @param babyID numeric ID of baby
+     * @param startDate the start time of the period to read
+     * @param endDate the end time of the period to read
+     * @param key the name of the channel
+     * @return an array with the values per second
+     */
     public float[] readSensor(int babyID, Date startDate, Date endDate, String key) {
         int numElements = (int) ((endDate.getTime() - startDate.getTime())
                 / Channels.TICKSPERVALUE);
         float[] result = new float[numElements];
+        boolean modified = false;
         try {
 
             Timestamp startD = new Timestamp(startDate.getTime());
             Timestamp endD = new Timestamp(endDate.getTime());
 
             binaryPS.setInt(1, babyID);
-            System.out.println("Sensor Code = " + Channels.getCode(key));
             binaryPS.setInt(2, Channels.getCode(key));
             binaryPS.setTimestamp(3, endD);
             binaryPS.setTimestamp(4, startD);
@@ -135,11 +144,12 @@ public class Dao {
                     int value = (int) bytes[i];
                     result[i] = (value < 0) ? value + 256 : value;
                 }
+                modified = true;
             }
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return result;
+        return modified? result:null;
     }
 
 }
