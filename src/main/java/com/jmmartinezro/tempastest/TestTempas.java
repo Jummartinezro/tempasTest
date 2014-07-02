@@ -8,7 +8,7 @@ package com.jmmartinezro.tempastest;
 import com.jmmartinezro.model.Channels;
 import com.jmmartinezro.model.Scenario;
 import com.jmmartinezro.model.dao.Dao;
-import com.jmmartinezro.utils.GenerateSQL;
+import com.jmmartinezro.utils.PrintData;
 
 /**
  *
@@ -32,6 +32,6 @@ public class TestTempas {
                 scenario.setSensorData(key, data);
             }
         }
-        GenerateSQL.generateSQLFile(scenario);
+        PrintData.generateSQLFile(scenario);
     }
 }

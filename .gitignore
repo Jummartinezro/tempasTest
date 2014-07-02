@@ -4,3 +4,4 @@ target/tempasTest-1.0-SNAPSHOT.jar
 *.netbeans_automatic_build
 *.class
 *.properties
+*.sql
