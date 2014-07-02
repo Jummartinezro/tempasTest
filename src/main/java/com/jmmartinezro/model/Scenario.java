@@ -15,10 +15,10 @@ import java.util.Map;
  */
 public class Scenario {
 
-    private int number;
-    private int babyId;
-    private Date startDate;
-    private Date endDate;
+    private final int number;
+    private final int babyId;
+    private final Date startDate;
+    private final Date endDate;
     /**
      * A map containing the data of each read.
      */
