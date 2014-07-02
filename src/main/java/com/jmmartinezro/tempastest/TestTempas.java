@@ -24,7 +24,7 @@ public class TestTempas {
         //TODO replace for the scenario number
         int scenarioNumber = 1;
         Scenario scenario = dao.readScenario(scenarioNumber);
-        for (String key : Channels.channels.keySet()) {
+        for (String key : Channels.getKeys()) {
             //TODO Look over the sensors to decode the blob
             float[] data = dao.readSensor(scenario.getBabyId(),
                     scenario.getStartDate(), scenario.getEndDate(), key);

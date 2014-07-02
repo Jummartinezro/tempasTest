@@ -29,7 +29,7 @@ public class Dao {
      * The connection to the DB
      */
     private Connection connection = null;
-    
+
     /**
      * Constant to find the number of seconds in a minute (60 :P )
      */
@@ -143,12 +143,13 @@ public class Dao {
                         .getTime()) / Channels.TICKSPERVALUE);
                 int numCopy = endRecord - startRecord;
                 byte[] bytes = data.getBytes(startRecord, numCopy);
-                
+
                 //Every minute we save the data
                 int sample = 0;
                 for (int i = 0; i < numCopy && sample + MINUTE < numElements; i++) {
                     int value = (int) bytes[sample += MINUTE];
-                    result[i] = (value < 0) ? value + 256 : value;
+                    value = (value < 0) ? value + 256 : value;
+                    result[i] = value / Channels.getDivider(key) + Channels.getOffset(key);
                 }
                 modified = true;
             }
