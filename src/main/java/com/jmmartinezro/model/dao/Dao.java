@@ -7,6 +7,8 @@ package com.jmmartinezro.model.dao;
 
 import com.jmmartinezro.model.Channels;
 import com.jmmartinezro.model.Scenario;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,6 +16,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -100,7 +103,7 @@ public class Dao {
                 Date startDate = resultSet.getTimestamp("StartDateTime");
                 Date endDate = resultSet.getTimestamp("EndDateTime");
                 scenario = new Scenario(scenarioNumber, sourceName, startDate, endDate);
-                System.out.println(scenario + "\n");
+                System.out.println("\n" + scenario + "\n");
             }
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
@@ -117,46 +120,75 @@ public class Dao {
      * @param key the name of the channel
      * @return an array with the values per second
      */
-    public float[] readSensor(int babyID, Date startDate, Date endDate, String key) {
+    public ArrayList<Float> readSensor(int babyID, Date startDate, Date endDate, String key) {
         int numElements = (int) ((endDate.getTime() - startDate.getTime())
                 / Channels.TICKSPERVALUE);
-        float[] result = new float[numElements / MINUTE - 1];
+        //float[] result = new float[numElements / MINUTE - 1];
+        ArrayList<Float> result = new ArrayList<>(numElements);
         boolean modified = false;
         try {
-
-            Timestamp startD = new Timestamp(startDate.getTime());
-            Timestamp endD = new Timestamp(endDate.getTime());
-
-            binaryPS.setInt(1, babyID);
-            binaryPS.setInt(2, Channels.getCode(key));
-            binaryPS.setTimestamp(3, endD);
-            binaryPS.setTimestamp(4, startD);
-
-            ResultSet rs = binaryPS.executeQuery();
+            ResultSet rs = setRequestValues(startDate, endDate, babyID, key);
             while (rs.next()) {
+                int numValues = rs.getInt("NUMVALUES");
                 Date recordStartTime = rs.getTimestamp("STARTTIME");
-                Blob data = rs.getBlob("THEVALUES");
 
                 int startRecord = (int) ((startDate.getTime() - recordStartTime
                         .getTime()) / Channels.TICKSPERVALUE);
                 int endRecord = (int) ((endDate.getTime() - recordStartTime
                         .getTime()) / Channels.TICKSPERVALUE);
-                int numCopy = endRecord - startRecord;
-                byte[] bytes = data.getBytes(startRecord, numCopy);
 
-                //Every minute we save the data
-                int sample = 0;
-                for (int i = 0; i < numCopy && sample + MINUTE < numElements; i++) {
-                    int value = (int) bytes[sample += MINUTE];
-                    value = (value < 0) ? value + 256 : value;
-                    result[i] = value / Channels.getDivider(key) + Channels.getOffset(key);
-                }
+                startRecord = (startRecord < 0) ? 0 : startRecord;
+                endRecord = (endRecord > numValues) ? numValues : endRecord;
+                int numCopy = endRecord - startRecord;
+
+                byte[] bytes = readBlob(rs, startRecord, numCopy);
+
+                addValues(numCopy, bytes, result, key);
                 modified = true;
             }
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
         return modified ? result : null;
+    }
+
+    private void addValues(int numCopy, byte[] bytes, ArrayList<Float> result, String key) {
+        //Every minute we save the data
+        //TODO Change for the mean
+        //for (int i = 0; i < numCopy && sample + MINUTE < numElements; i++) {
+        for (int i = 0; i < numCopy; i++) {
+            int value = (int) bytes[i];
+            value = (value < 0) ? value + 256 : value;
+            result.add(value / Channels.getDivider(key) + Channels.getOffset(key));
+        }
+    }
+
+    private ResultSet setRequestValues(Date startDate, Date endDate, int babyID, String key) throws SQLException {
+        Timestamp startD = new Timestamp(startDate.getTime());
+        Timestamp endD = new Timestamp(endDate.getTime());
+        binaryPS.setInt(1, babyID);
+        binaryPS.setInt(2, Channels.getCode(key));
+        binaryPS.setTimestamp(3, endD);
+        binaryPS.setTimestamp(4, startD);
+        ResultSet rs = binaryPS.executeQuery();
+        return rs;
+    }
+
+    private byte[] readBlob(ResultSet rs, int startIndex, int numCopy) throws SQLException {
+        byte[] bytes;
+        try {
+            Blob data = rs.getBlob("THEVALUES");
+            bytes = data.getBytes(startIndex, numCopy);
+        } catch (SQLException sQLException) {
+            InputStream data = rs.getBinaryStream("THEVALUES");
+            bytes = new byte[numCopy];
+            try {
+                data.read(bytes, 0, numCopy);
+            } catch (IOException ex) {
+                Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        return bytes;
     }
 
 }

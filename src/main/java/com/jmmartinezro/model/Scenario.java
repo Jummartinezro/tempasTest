@@ -5,6 +5,7 @@
  */
 package com.jmmartinezro.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class Scenario {
     /**
      * A map containing the data of each read.
      */
-    private final Map<String, float[]> sensorsData;
+    private final Map<String, ArrayList<Float>> sensorsData;
 
     /**
      * Set a new scenario to test
@@ -72,7 +73,7 @@ public class Scenario {
     /**
      * @return the sensorsData
      */
-    public Map<String, float[]> getSensorsData() {
+    public Map<String, ArrayList<Float>> getSensorsData() {
         return sensorsData;
     }
 
@@ -82,7 +83,7 @@ public class Scenario {
      * @param key
      * @param sensorData
      */
-    public void setSensorData(String key, float[] sensorData) {
+    public void setSensorData(String key, ArrayList<Float> sensorData) {
         getSensorsData().put(key, sensorData);
     }
 

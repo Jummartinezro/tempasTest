@@ -1,17 +1,14 @@
 package com.jmmartinezro.utils;
 
 import com.jmmartinezro.model.Scenario;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,8 +52,8 @@ public final class PrintData {
 
             Calendar cal = Calendar.getInstance();
             // For each value of the sensor
-            for (int i = 0; i < scenario.getSensorsData().get(key).length; i++) {
-                float f = scenario.getSensorsData().get(key)[i];
+            for (int i = 0; i <= scenario.getSensorsData().get(key).size(); i++) {
+                float f = scenario.getSensorsData().get(key).get(i);
                 cal.add(Calendar.MINUTE, -1);
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-dd-MM HH:mm:ss.SSS");
                 sqlScript.append("\t(@patNum, @paramNum,'")
@@ -108,7 +105,7 @@ public final class PrintData {
     public static final void printScenarioData(Scenario scenario) {
         // For each sensor
         for (String key : scenario.getSensorsData().keySet()) {
-            System.out.println(key + " = " + Arrays.toString(scenario.getSensorsData().get(key)));
+            System.out.println(key + " = " + scenario.getSensorsData().get(key));
         }
     }
 

@@ -9,6 +9,7 @@ import com.jmmartinezro.model.Channels;
 import com.jmmartinezro.model.Scenario;
 import com.jmmartinezro.model.dao.Dao;
 import com.jmmartinezro.utils.PrintData;
+import java.util.ArrayList;
 
 /**
  *
@@ -23,15 +24,22 @@ public class TestTempas {
         Dao dao = new Dao();
         //TODO replace for the scenario number
         int scenarioNumber = 1;
-        Scenario scenario = dao.readScenario(scenarioNumber);
-        for (String key : Channels.getKeys()) {
-            //TODO Look over the sensors to decode the blob
-            float[] data = dao.readSensor(scenario.getBabyId(),
-                    scenario.getStartDate(), scenario.getEndDate(), key);
-            if (data != null) {
-                scenario.setSensorData(key, data);
-            }
+        if (args.length > 0) {
+            scenarioNumber = new Integer(args[0]);
         }
-        PrintData.generateSQLFile(scenario);
+        
+        //for (scenarioNumber = 1; scenarioNumber < 26; scenarioNumber++) {
+            Scenario scenario = dao.readScenario(scenarioNumber);
+            for (String key : Channels.getKeys()) {
+                //TODO Look over the sensors to decode the blob
+                ArrayList<Float> data = dao.readSensor(scenario.getBabyId(),
+                        scenario.getStartDate(), scenario.getEndDate(), key);
+                if (data != null) {
+                    scenario.setSensorData(key, data);
+                }
+            }
+            //PrintData.generateSQLFile(scenario);
+            PrintData.printScenarioData(scenario);
+        //}
     }
 }
