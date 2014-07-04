@@ -27,19 +27,25 @@ public class TestTempas {
         if (args.length > 0) {
             scenarioNumber = new Integer(args[0]);
         }
-        
-        //for (scenarioNumber = 1; scenarioNumber < 26; scenarioNumber++) {
+        // TODO Get the list of all the babies
+        int[] babiesIds = dao.getBabiesIds();
+
+        for (scenarioNumber = 1; scenarioNumber <= 26; scenarioNumber++) {
             Scenario scenario = dao.readScenario(scenarioNumber);
-            for (String key : Channels.getKeys()) {
-                //TODO Look over the sensors to decode the blob
-                ArrayList<Float> data = dao.readSensor(scenario.getBabyId(),
-                        scenario.getStartDate(), scenario.getEndDate(), key);
-                if (data != null) {
-                    scenario.setSensorData(key, data);
+            //TODO For each baby, set the scenario (What to do if the baby doesn't have data in the scenario dates ??)
+            for (int i = 0; i < babiesIds.length; i++) {
+                scenario.setBabyId(babiesIds[i]);
+                for (String key : Channels.getKeys()) {
+                    ArrayList<Float> data = dao.readSensor(scenario.getBabyId(),
+                            scenario.getStartDate(), scenario.getEndDate(), key);
+                    if (data != null) {
+                        scenario.setSensorData(key, data);
+                    }
                 }
+                //PrintData.printScenarioData(scenario);
+                PrintData.generateSQLFile(scenario);
+                //PrintData.printSQLFile(scenario);
             }
-            //PrintData.generateSQLFile(scenario);
-            PrintData.printScenarioData(scenario);
-        //}
+        }
     }
 }

@@ -17,7 +17,7 @@ import java.util.Map;
 public class Scenario {
 
     private final int number;
-    private final int babyId;
+    private int babyId;
     private final Date startDate;
     private final Date endDate;
     /**
@@ -54,6 +54,13 @@ public class Scenario {
      */
     public int getBabyId() {
         return babyId;
+    }
+
+    /**
+     * @param babyId the babyId to set
+     */
+    public void setBabyId(int babyId) {
+        this.babyId = babyId;
     }
 
     /**

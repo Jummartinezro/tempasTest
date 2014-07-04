@@ -33,7 +33,18 @@ public final class PrintData {
      */
     public static final void generateSQLFile(Scenario scenario) {
         PrintWriter writer = createFile(scenario);
+        generateString(scenario);
+        if (writer != null) {
+            writer.write(sqlScript.toString());
+            writer.close();
+        }
+    }
 
+    /**
+     * Generate the string to be writed in the console or in a file
+     * @param scenario
+     */
+    private static void generateString(Scenario scenario) {
         String head
                 = "DECLARE @patNum int;\n"
                 + "\tSET @patNum = (SELECT Pat_Num FROM Patient WHERE Pat_Ipp = 'BT-" + scenario.getBabyId() + "');\n";
@@ -52,7 +63,7 @@ public final class PrintData {
 
             Calendar cal = Calendar.getInstance();
             // For each value of the sensor
-            for (int i = 0; i <= scenario.getSensorsData().get(key).size(); i++) {
+            for (int i = 0; i < scenario.getSensorsData().get(key).size(); i++) {
                 float f = scenario.getSensorsData().get(key).get(i);
                 cal.add(Calendar.MINUTE, -1);
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-dd-MM HH:mm:ss.SSS");
@@ -69,11 +80,6 @@ public final class PrintData {
                 .append(head)
                 .append("DELETE FROM Pat_Parametre WHERE Pat_Num=@patNum;\nGO\n\n")
                 .append("****/");
-
-        if (writer != null) {
-            writer.write(sqlScript.toString());
-            writer.close();
-        }
     }
 
     /**
@@ -84,13 +90,14 @@ public final class PrintData {
      */
     private static PrintWriter createFile(Scenario scenario) {
         Path pathToFile = Paths.get("GeneratedScripts/Scenario_" + scenario.getNumber() + "_Baby_" + scenario.getBabyId() + ".sql");
+        System.out.println("Writing file " + pathToFile);
         PrintWriter writer = null;
         try {
             Files.createDirectories(pathToFile.getParent());
             Files.createFile(pathToFile);
             writer = new PrintWriter(pathToFile.toString(), "UTF-8");
         } catch (FileAlreadyExistsException ex) {
-            //Do nothing because file already exist
+            //TODO Delete and create
         } catch (IOException ex) {
             Logger.getLogger(PrintData.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -103,16 +110,20 @@ public final class PrintData {
      * @param scenario
      */
     public static final void printScenarioData(Scenario scenario) {
-        // For each sensor
+        System.out.println("\n" + scenario + "\n");
+        // For each sensor       
         for (String key : scenario.getSensorsData().keySet()) {
             System.out.println(key + " = " + scenario.getSensorsData().get(key));
         }
     }
 
     /**
-     * Prints the SQL file in the console, null if it was not generated
+     * Prints the SQL file in the console
+     *
+     * @param scenario the scenario to print
      */
-    public static final void printSQLFile() {
+    public static final void printSQLFile(Scenario scenario) {
+        generateString(scenario);
         System.out.println(sqlScript);
     }
 
