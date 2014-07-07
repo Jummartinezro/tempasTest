@@ -19,6 +19,7 @@ import java.util.logging.Logger;
 
 /**
  * Class that get the data from the bTalk dataBase
+ *
  * @author Juan Manuel MARTINEZ
  */
 public class Dao {
@@ -32,6 +33,7 @@ public class Dao {
      * Constant to find the number of seconds in a minute (60 :P )
      */
     private static final int MINUTE = (int) TimeUnit.MINUTES.toSeconds(1);
+//    private static final int MINUTE = 3;
 
     /**
      * "Constant" that saves the number of babies
@@ -110,20 +112,27 @@ public class Dao {
         boolean modified = false;
         try {
             ResultSet rs = setRequestValues(babyID, key);
-            //TODO Change to map ou move to avoid data loss (and add date variable)
+
+            SortedMap<Date, Float> temporal = new TreeMap<>();
+            float mean = 0f;
             result = new TreeMap<>();
             Calendar cal = Calendar.getInstance();
+
+            valueWrapper vWrapper = new valueWrapper(result, temporal, mean);
+            int numValues = 0;
             while (rs.next()) {
                 Date startDate = rs.getTimestamp("STARTTIME");
                 cal.setTime(startDate);
-                int numValues = rs.getInt("NUMVALUES");
+                numValues = rs.getInt("NUMVALUES");
 
                 byte[] bytes = readBlob(rs, numValues);
 
-                addValues(numValues, bytes, result, key, cal);
+                addValues(numValues, bytes, vWrapper, key, cal);
                 modified = true;
             }
-            //TODO Samples per minute
+            if (numValues % MINUTE != 0) {
+                result.put(cal.getTime(), vWrapper.mean / vWrapper.temporal.size());
+            }
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -136,20 +145,25 @@ public class Dao {
      * @param bytes to
      * @param result with the sensor with the specified @param key
      */
-    private void addValues(int numCopy, byte[] bytes, SortedMap<Date, Float> result, String key, Calendar cal) {
+    private valueWrapper addValues(int numCopy, byte[] bytes, valueWrapper vWrapper, String key, Calendar cal) {
         //Every minute we save the data
-        float sample = 0;
-        for (int i = 0; i < numCopy; i++) {
+        int i;
+        for (i = 0; i < numCopy; i++) {
             float value = (int) bytes[i];
             value = (value < 0) ? value + 256 : value;
             value = value / Channels.getDivider(key) + Channels.getOffset(key);
-            sample += value;
-            if ((i + 1) % MINUTE == 0) {
-                result.put(cal.getTime(), sample / MINUTE);
-                cal.add(Calendar.MINUTE, +1);
-                sample = 0;
+            vWrapper.mean += value;
+            if ((i + 1) % MINUTE != 0) {
+                vWrapper.temporal.put(cal.getTime(), value);
+                cal.add(Calendar.SECOND, +1);
+            } else {
+                cal.add(Calendar.SECOND, +1);
+                vWrapper.result.put(cal.getTime(), vWrapper.mean / MINUTE);
+                vWrapper.mean = 0f;
+                vWrapper.temporal = new TreeMap<>();
             }
         }
+        return vWrapper;
     }
 
     /**
@@ -183,7 +197,7 @@ public class Dao {
         try {
             Blob data = rs.getBlob("THEVALUES");
             bytes = data.getBytes(0, numCopy);
-        } catch (SQLException sQLException) {
+        } catch (SQLException exception) {
             InputStream data = rs.getBinaryStream("THEVALUES");
             bytes = new byte[numCopy];
             try {
@@ -212,5 +226,22 @@ public class Dao {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
         return listBabies;
+    }
+
+    /**
+     * Class to save the values for each request
+     */
+    private static final class valueWrapper {
+
+        private SortedMap<Date, Float> result;
+        SortedMap<Date, Float> temporal;
+        private float mean;
+
+        public valueWrapper(SortedMap<Date, Float> result, SortedMap<Date, Float> temporal, float mean) {
+            this.result = result;
+            this.temporal = temporal;
+            this.mean = mean;
+        }
+
     }
 }
