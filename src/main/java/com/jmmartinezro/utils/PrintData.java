@@ -1,6 +1,6 @@
 package com.jmmartinezro.utils;
 
-import com.jmmartinezro.model.Scenario;
+import com.jmmartinezro.model.Baby;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,7 +31,7 @@ public final class PrintData {
      *
      * @param scenario
      */
-    public static final void generateSQLFile(Scenario scenario) {
+    public static final void generateSQLFile(Baby scenario) {
         PrintWriter writer = createFile(scenario);
         generateString(scenario);
         if (writer != null) {
@@ -42,16 +42,18 @@ public final class PrintData {
 
     /**
      * Generate the string to be writed in the console or in a file
-     * @param scenario
+     *
+     * @param baby
      */
-    private static void generateString(Scenario scenario) {
+    private static void generateString(Baby baby) {
         String head
                 = "DECLARE @patNum int;\n"
-                + "\tSET @patNum = (SELECT Pat_Num FROM Patient WHERE Pat_Ipp = 'BT-" + scenario.getBabyId() + "');\n";
+                + "\tSET @patNum = (SELECT Pat_Num FROM Patient WHERE Pat_Ipp = 'BT-" + baby.getBabyId() + "');\n";
+        //TODO add delete script at the beginning of the file
         sqlScript = new StringBuilder(head.length());
 
         // For each sensor
-        for (String key : scenario.getSensorsData().keySet()) {
+        for (String key : baby.getSensorsData().keySet()) {
             sqlScript.append(head)
                     .append("\nDECLARE @paramNum int;\n")
                     .append("\tSET @paramNum = (SELECT Tpara_Num FROM Thes_Param_Pat WHERE Tpara_Libelle='")
@@ -61,16 +63,28 @@ public final class PrintData {
                     .append(key).append("');\n")
                     .append("\nINSERT INTO Pat_Parametre(Pat_Num, Tpara_Num, Ppara_Date, Ppara_Unite, Ppara_Valeur, Ppara_Lib_Valeur, Tutil_Num, Tdate_Mod) VALUES\n");
 
-            Calendar cal = Calendar.getInstance();
             // For each value of the sensor
-            for (int i = 0; i < scenario.getSensorsData().get(key).size(); i++) {
-                float f = scenario.getSensorsData().get(key).get(i);
-                cal.add(Calendar.MINUTE, -1);
+            int i = 1;
+            for (Date date : baby.getSensorsData().get(key).keySet()) {
+                float f = baby.getSensorsData().get(key).get(date);
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-dd-MM HH:mm:ss.SSS");
                 sqlScript.append("\t(@patNum, @paramNum,'")
-                        .append(dateFormat.format(cal.getTime()))
+                        .append(dateFormat.format(date))
                         .append("', @paramUnit, ").append(f)
                         .append(", @paramUnit, 12101, GETDATE()),\n");
+                if (i++ % 1000 == 0) {
+                    i = 1;
+                    sqlScript.deleteCharAt(sqlScript.length() - 2);
+                    sqlScript.replace(sqlScript.length() - 1, sqlScript.length() - 1, ";\nGO\n");
+                    sqlScript.append(head)
+                    .append("\nDECLARE @paramNum int;\n")
+                    .append("\tSET @paramNum = (SELECT Tpara_Num FROM Thes_Param_Pat WHERE Tpara_Libelle='")
+                    .append(key).append("');\n\n")
+                    .append("DECLARE @paramUnit varchar(10);\n")
+                    .append("\tSET @paramUnit = (SELECT Tpara_Unite FROM Thes_Param_Pat where Tpara_Libelle='")
+                    .append(key).append("');\n");
+                    sqlScript.append("\nINSERT INTO Pat_Parametre(Pat_Num, Tpara_Num, Ppara_Date, Ppara_Unite, Ppara_Valeur, Ppara_Lib_Valeur, Tutil_Num, Tdate_Mod) VALUES\n");
+                }
             }
             sqlScript.deleteCharAt(sqlScript.length() - 2);
             sqlScript.replace(sqlScript.length() - 1, sqlScript.length() - 1, ";\nGO\n");
@@ -85,11 +99,11 @@ public final class PrintData {
     /**
      * Creates a file with the specified scenario
      *
-     * @param scenario
+     * @param baby
      * @return
      */
-    private static PrintWriter createFile(Scenario scenario) {
-        Path pathToFile = Paths.get("GeneratedScripts/Scenario_" + scenario.getNumber() + "_Baby_" + scenario.getBabyId() + ".sql");
+    private static PrintWriter createFile(Baby baby) {
+        Path pathToFile = Paths.get("GeneratedScripts/Baby_" + baby.getBabyId() + ".sql");
         System.out.println("Writing file " + pathToFile);
         PrintWriter writer = null;
         try {
@@ -107,24 +121,27 @@ public final class PrintData {
     /**
      * Prints in console all the sensor's data related to the scenario
      *
-     * @param scenario
+     * @param baby
      */
-    public static final void printScenarioData(Scenario scenario) {
-        System.out.println("\n" + scenario + "\n");
+    public static final void printBabyData(Baby baby) {
+        System.out.println("\n" + baby + "\n");
         // For each sensor       
-        for (String key : scenario.getSensorsData().keySet()) {
-            System.out.println(key + " = " + scenario.getSensorsData().get(key));
+        for (String key : baby.getSensorsData().keySet()) {
+            System.out.println(key + " = ");
+            // For each date
+            for (Date date : baby.getSensorsData().get(key).keySet()) {
+                System.out.println(date + "\t=\t" + baby.getSensorsData().get(key).get(date));
+            }
         }
     }
 
     /**
      * Prints the SQL file in the console
      *
-     * @param scenario the scenario to print
+     * @param baby the baby to print
      */
-    public static final void printSQLFile(Scenario scenario) {
-        generateString(scenario);
+    public static final void printSQLFile(Baby baby) {
+        generateString(baby);
         System.out.println(sqlScript);
     }
-
 }

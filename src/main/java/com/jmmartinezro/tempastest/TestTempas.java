@@ -1,17 +1,13 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.jmmartinezro.tempastest;
 
 import com.jmmartinezro.model.Channels;
-import com.jmmartinezro.model.Scenario;
+import com.jmmartinezro.model.Baby;
 import com.jmmartinezro.model.dao.Dao;
-import com.jmmartinezro.utils.PrintData;
-import java.util.ArrayList;
+import java.util.Date;
+import java.util.SortedMap;
 
 /**
+ * Class to save in an sql file the data of the bTalk database.
  *
  * @author Juan Manuel MARTINEZ
  */
@@ -22,30 +18,26 @@ public class TestTempas {
      */
     public static void main(String[] args) {
         Dao dao = new Dao();
-        //TODO replace for the scenario number
-        int scenarioNumber = 1;
-        if (args.length > 0) {
-            scenarioNumber = new Integer(args[0]);
-        }
-        // TODO Get the list of all the babies
         int[] babiesIds = dao.getBabiesIds();
-
-        for (scenarioNumber = 1; scenarioNumber <= 26; scenarioNumber++) {
-            Scenario scenario = dao.readScenario(scenarioNumber);
-            //TODO For each baby, set the scenario (What to do if the baby doesn't have data in the scenario dates ??)
-            for (int i = 0; i < babiesIds.length; i++) {
-                scenario.setBabyId(babiesIds[i]);
-                for (String key : Channels.getKeys()) {
-                    ArrayList<Float> data = dao.readSensor(scenario.getBabyId(),
-                            scenario.getStartDate(), scenario.getEndDate(), key);
-                    if (data != null) {
-                        scenario.setSensorData(key, data);
-                    }
+        int total = 0;
+        for (int i = 0; i < babiesIds.length; i++) {
+            Baby baby = new Baby(babiesIds[i]);
+            int j = 0;
+            for (String key : Channels.getKeys()) {
+                SortedMap<Date, Float> data = dao.readSensor(baby.getBabyId(), key);
+                if (data != null) {
+                    baby.setSensorData(key, data);
+                    j += data.size();
                 }
-                //PrintData.printScenarioData(scenario);
-                PrintData.generateSQLFile(scenario);
-                //PrintData.printSQLFile(scenario);
+                //System.out.println("Baby "+ baby.getBabyId() +"# " + key + " = " + data.size());
             }
+            System.out.println("Baby " + baby.getBabyId() + " = " + j);
+            total += j;
+            //PrintData.printBabyData(baby);
+            //PrintData.generateSQLFile(baby);
+            //PrintData.printSQLFile(baby);
         }
+        // Counting the values entered
+        System.out.println("Total = " + total);
     }
 }

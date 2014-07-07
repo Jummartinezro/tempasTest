@@ -1,7 +1,6 @@
 package com.jmmartinezro.model.dao;
 
 import com.jmmartinezro.model.Channels;
-import com.jmmartinezro.model.Scenario;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Blob;
@@ -10,15 +9,16 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Class that get the data from the bTalk dataBase
  * @author Juan Manuel MARTINEZ
  */
 public class Dao {
@@ -32,7 +32,7 @@ public class Dao {
      * Constant to find the number of seconds in a minute (60 :P )
      */
     private static final int MINUTE = (int) TimeUnit.MINUTES.toSeconds(1);
-    
+
     /**
      * "Constant" that saves the number of babies
      */
@@ -57,7 +57,7 @@ public class Dao {
     /**
      * The binary sql for querying pbinary table.
      */
-    private static final String binarySQL = "SELECT * FROM badger.PBinary WHERE DBPATID = ? AND TSECSPERVALUE=10000 AND CODE = ? AND STARTTIME < ? AND ENDTIME > ? ORDER BY DBPATID,CODE,STARTTIME";
+    private static final String binarySQL = "SELECT * FROM badger.PBinary WHERE DBPATID = ? AND CODE = ? AND TSECSPERVALUE=10000 ORDER BY DBPATID,CODE,STARTTIME";
 
     /**
      * Query to get the number of babies
@@ -99,64 +99,31 @@ public class Dao {
     }
 
     /**
-     * Reads the scenario with his number
-     *
-     * @param scenarioNumber with his number
-     * @return an Scenario (if exists, null o.c)
-     */
-    public Scenario readScenario(int scenarioNumber) {
-        ResultSet resultSet;
-        Scenario scenario = null;
-        try {
-            trialPS.setInt(1, scenarioNumber);
-            resultSet = trialPS.executeQuery();
-            if (resultSet.next()) {
-                int sourceName = resultSet.getInt("SourceName");
-                Date startDate = resultSet.getTimestamp("StartDateTime");
-                Date endDate = resultSet.getTimestamp("EndDateTime");
-                scenario = new Scenario(scenarioNumber, sourceName, startDate, endDate);
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return scenario;
-    }
-
-    /**
      * Reads sensor values from pbinary table
      *
      * @param babyID numeric ID of baby
-     * @param startDate the start time of the period to read
-     * @param endDate the end time of the period to read
      * @param key the name of the channel
      * @return an array with the values per second
      */
-    public ArrayList<Float> readSensor(int babyID, Date startDate, Date endDate, String key) {
-        int numElements = (int) ((endDate.getTime() - startDate.getTime())
-                / Channels.TICKSPERVALUE);
-        ArrayList<Float> result = new ArrayList<>(numElements / MINUTE - 1);
-
+    public SortedMap<Date, Float> readSensor(int babyID, String key) {
+        SortedMap<Date, Float> result = null;
         boolean modified = false;
         try {
-            ResultSet rs = setRequestValues(startDate, endDate, babyID, key);
+            ResultSet rs = setRequestValues(babyID, key);
+            //TODO Change to map ou move to avoid data loss (and add date variable)
+            result = new TreeMap<>();
+            Calendar cal = Calendar.getInstance();
             while (rs.next()) {
+                Date startDate = rs.getTimestamp("STARTTIME");
+                cal.setTime(startDate);
                 int numValues = rs.getInt("NUMVALUES");
-                Date recordStartTime = rs.getTimestamp("STARTTIME");
 
-                int startRecord = (int) ((startDate.getTime() - recordStartTime
-                        .getTime()) / Channels.TICKSPERVALUE);
-                int endRecord = (int) ((endDate.getTime() - recordStartTime
-                        .getTime()) / Channels.TICKSPERVALUE);
+                byte[] bytes = readBlob(rs, numValues);
 
-                startRecord = (startRecord < 0) ? 0 : startRecord;
-                endRecord = (endRecord > numValues) ? numValues : endRecord;
-                int numCopy = endRecord - startRecord;
-
-                byte[] bytes = readBlob(rs, startRecord, numCopy);
-
-                addValues(numCopy, bytes, result, key);
+                addValues(numValues, bytes, result, key, cal);
                 modified = true;
             }
+            //TODO Samples per minute
         } catch (SQLException ex) {
             Logger.getLogger(Dao.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -169,7 +136,7 @@ public class Dao {
      * @param bytes to
      * @param result with the sensor with the specified @param key
      */
-    private void addValues(int numCopy, byte[] bytes, ArrayList<Float> result, String key) {
+    private void addValues(int numCopy, byte[] bytes, SortedMap<Date, Float> result, String key, Calendar cal) {
         //Every minute we save the data
         float sample = 0;
         for (int i = 0; i < numCopy; i++) {
@@ -178,7 +145,8 @@ public class Dao {
             value = value / Channels.getDivider(key) + Channels.getOffset(key);
             sample += value;
             if ((i + 1) % MINUTE == 0) {
-                result.add(sample / MINUTE);
+                result.put(cal.getTime(), sample / MINUTE);
+                cal.add(Calendar.MINUTE, +1);
                 sample = 0;
             }
         }
@@ -194,13 +162,9 @@ public class Dao {
      * @return
      * @throws SQLException
      */
-    private ResultSet setRequestValues(Date startDate, Date endDate, int babyID, String key) throws SQLException {
-        Timestamp startD = new Timestamp(startDate.getTime());
-        Timestamp endD = new Timestamp(endDate.getTime());
+    private ResultSet setRequestValues(int babyID, String key) throws SQLException {
         binaryPS.setInt(1, babyID);
         binaryPS.setInt(2, Channels.getCode(key));
-        binaryPS.setTimestamp(3, endD);
-        binaryPS.setTimestamp(4, startD);
         ResultSet rs = binaryPS.executeQuery();
         return rs;
     }
@@ -214,11 +178,11 @@ public class Dao {
      * @return
      * @throws SQLException
      */
-    private byte[] readBlob(ResultSet rs, int startIndex, int numCopy) throws SQLException {
+    private byte[] readBlob(ResultSet rs, int numCopy) throws SQLException {
         byte[] bytes;
         try {
             Blob data = rs.getBlob("THEVALUES");
-            bytes = data.getBytes(startIndex, numCopy);
+            bytes = data.getBytes(0, numCopy);
         } catch (SQLException sQLException) {
             InputStream data = rs.getBinaryStream("THEVALUES");
             bytes = new byte[numCopy];
