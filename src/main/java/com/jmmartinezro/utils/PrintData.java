@@ -51,7 +51,8 @@ public final class PrintData {
                 + "\tSET @patNum = (SELECT Pat_Num FROM Patient WHERE Pat_Ipp = 'BT-" + baby.getBabyId() + "');\n";
         //TODO add delete script at the beginning of the file
         sqlScript = new StringBuilder(head.length());
-
+        sqlScript.append(head)
+                .append("DELETE FROM Pat_Parametre WHERE Pat_Num=@patNum;\nGO\n\n");
         // For each sensor
         for (String key : baby.getSensorsData().keySet()) {
             sqlScript.append(head)
@@ -77,12 +78,12 @@ public final class PrintData {
                     sqlScript.deleteCharAt(sqlScript.length() - 2);
                     sqlScript.replace(sqlScript.length() - 1, sqlScript.length() - 1, ";\nGO\n");
                     sqlScript.append(head)
-                    .append("\nDECLARE @paramNum int;\n")
-                    .append("\tSET @paramNum = (SELECT Tpara_Num FROM Thes_Param_Pat WHERE Tpara_Libelle='")
-                    .append(key).append("');\n\n")
-                    .append("DECLARE @paramUnit varchar(10);\n")
-                    .append("\tSET @paramUnit = (SELECT Tpara_Unite FROM Thes_Param_Pat where Tpara_Libelle='")
-                    .append(key).append("');\n");
+                            .append("\nDECLARE @paramNum int;\n")
+                            .append("\tSET @paramNum = (SELECT Tpara_Num FROM Thes_Param_Pat WHERE Tpara_Libelle='")
+                            .append(key).append("');\n\n")
+                            .append("DECLARE @paramUnit varchar(10);\n")
+                            .append("\tSET @paramUnit = (SELECT Tpara_Unite FROM Thes_Param_Pat where Tpara_Libelle='")
+                            .append(key).append("');\n");
                     sqlScript.append("\nINSERT INTO Pat_Parametre(Pat_Num, Tpara_Num, Ppara_Date, Ppara_Unite, Ppara_Valeur, Ppara_Lib_Valeur, Tutil_Num, Tdate_Mod) VALUES\n");
                 }
             }

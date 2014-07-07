@@ -3,6 +3,7 @@ package com.jmmartinezro.tempastest;
 import com.jmmartinezro.model.Baby;
 import com.jmmartinezro.model.Channels;
 import com.jmmartinezro.model.dao.Dao;
+import com.jmmartinezro.utils.PrintData;
 import java.util.Date;
 import java.util.SortedMap;
 
@@ -31,13 +32,12 @@ public class TestTempas {
                 }
                 //System.out.println("Baby "+ baby.getBabyId() +"# " + key + " = " + data.size());
             }
-            System.out.println("Baby " + baby.getBabyId() + " = " + j);
             total += j;
-            //PrintData.printBabyData(baby);
-            //PrintData.generateSQLFile(baby);
-            //PrintData.printSQLFile(baby);
+//            PrintData.printBabyData(baby);
+            PrintData.generateSQLFile(baby);
+//            PrintData.printSQLFile(baby);
         }
         // Counting the values entered
-        System.out.println("Total = " + total);
+//        System.out.println("Total = " + total);
     }
 }
